@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVD MoS2 终极科研平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- 
+        Version 4.0 Ultimate Updates:
+        Merged Advanced Simulator (5 params) with Full Characterization Suite (Raman, PL, AFM).
+    -->
+
+    <style>
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: #f8fafc; color: #334155; }
+        .card { background: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.3s ease; }
+        .chart-container { position: relative; width: 100%; height: 350px; max-height: 400px; max-width: 100%; margin: 0 auto; }
+        
+        /* Tab Navigation Styles */
+        .nav-btn { color: #64748b; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .nav-btn:hover { color: #0f766e; }
+        .nav-btn.active { border-bottom: 2px solid #0f766e; color: #0f766e; font-weight: 700; background-color: #f0fdfa; }
+        
+        /* Custom Slider Styling */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #0f766e; cursor: pointer; margin-top: -6px; box-shadow: 0 0 2px rgba(0,0,0,0.3); transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #cbd5e1; border-radius: 2px; }
+        
+        .ai-response-box { background: linear-gradient(to right, #f0f9ff, #e0f2fe); border-left: 4px solid #0ea5e9; }
+        .typing-indicator::after { content: '...'; animation: typing 1s infinite; }
+        @keyframes typing { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+        .markdown-content p { margin-bottom: 0.5em; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-teal-600 rounded flex items-center justify-center text-white font-bold text-lg">Mo</div>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight line-clamp-1">CVD Research: <span class="text-teal-600">Low-T & Low-P Growth of MoS₂</span></h1>
+            </div>
+            <nav class="hidden md:flex space-x-8">
+                <button onclick="scrollToSection('intro')" class="text-slate-500 hover:text-teal-600 transition text-sm font-medium">项目背景</button>
+                <button onclick="scrollToSection('simulator')" class="text-slate-500 hover:text-teal-600 transition text-sm font-medium">虚拟实验室</button>
+                <button onclick="scrollToSection('analysis')" class="text-teal-600 font-bold transition text-sm">表征分析</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-12">
+
+        <!-- SECTION 1: Introduction -->
+        <section id="intro" class="space-y-6">
+            <div class="max-w-4xl mx-auto text-center">
+                <h2 class="text-2xl md:text-3xl font-bold text-slate-900">MoS₂ 低温低压 CVD 生长与调控</h2>
+                <p class="mt-4 text-slate-600 leading-relaxed">
+                    本平台模拟了二硫化钼生长的核心动力学过程。通过调节 <span class="text-teal-600 font-bold">温度、压强、载气流量、钼硫比、生长时间</span> 五大参数，探索如何制备高质量的单层薄膜。
+                </p>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Advanced CVD Simulator -->
+        <section id="simulator" class="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
+            <div class="p-4 md:p-6 bg-slate-50 border-b border-slate-200">
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <span class="w-2 h-6 bg-teal-500 rounded-full"></span>
+                    虚拟 CVD 反应室 (Process Simulator)
+                </h2>
+                <p class="text-sm text-slate-500 mt-1">请调节参数，寻找最佳生长窗口。</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-0">
+                <!-- Controls Side -->
+                <div class="lg:col-span-4 p-6 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white space-y-6 overflow-y-auto max-h-[800px]">
+                    <!-- 1. Temp -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1"><label class="text-sm font-semibold text-slate-700">1. 生长温度 (T)</label><span id="tempValue" class="text-teal-600 font-mono font-bold text-sm">650°C</span></div>
+                        <input type="range" id="tempSlider" min="500" max="900" step="10" value="650">
+                    </div>
+                    <!-- 2. Pressure -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1"><label class="text-sm font-semibold text-slate-700">2. 反应压强 (P)</label><span id="pressureValue" class="text-teal-600 font-mono font-bold text-sm">500 Pa</span></div>
+                        <input type="range" id="pressureSlider" min="10" max="5000" step="10" value="500">
+                    </div>
+                    <!-- 3. Flow Rate -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1"><label class="text-sm font-semibold text-slate-700">3. 载气流量 (Flow)</label><span id="flowValue" class="text-teal-600 font-mono font-bold text-sm">50 sccm</span></div>
+                        <input type="range" id="flowSlider" min="5" max="200" step="5" value="50">
+                    </div>
+                    <!-- 4. Mo:S Ratio -->
+                    <div class="border-t border-slate-100 pt-4">
+                        <div class="flex justify-between items-center mb-1"><label class="text-sm font-semibold text-slate-700">4. 硫钼前驱体比 (S:Mo)</label><span id="ratioValue" class="text-indigo-600 font-mono font-bold text-sm">10:1</span></div>
+                        <input type="range" id="ratioSlider" min="1" max="100" step="1" value="10">
+                    </div>
+                    <!-- 5. Growth Time -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1"><label class="text-sm font-semibold text-slate-700">5. 生长时间 (Time)</label><span id="timeValue" class="text-indigo-600 font-mono font-bold text-sm">15 min</span></div>
+                        <input type="range" id="timeSlider" min="1" max="60" step="1" value="15">
+                    </div>
+                    <button id="runSimBtn" class="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center justify-center gap-2 mt-2">
+                        <span>🚀 开始生长模拟</span>
+                    </button>
+                </div>
+
+                <!-- Visualization Side -->
+                <div class="lg:col-span-8 p-6 bg-slate-50 relative flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="bg-white px-3 py-1 rounded border border-slate-200 shadow-sm"><span class="text-[10px] text-slate-400 uppercase font-bold">Shape</span><div id="shapeDisplay" class="text-sm font-bold text-slate-700">-</div></div>
+                        <div class="bg-white px-3 py-1 rounded border border-slate-200 shadow-sm"><span class="text-[10px] text-slate-400 uppercase font-bold">Mode</span><div id="growthMode" class="text-sm font-bold text-teal-600">-</div></div>
+                    </div>
+                    <div class="relative w-full aspect-video bg-white rounded-lg border border-slate-300 shadow-inner overflow-hidden flex items-center justify-center">
+                        <canvas id="simCanvas" width="800" height="450" class="w-full h-full object-contain"></canvas>
+                        <div class="absolute bottom-2 left-2 text-[10px] text-slate-400 font-mono bg-white/80 px-1 rounded">Scale: 10μm</div>
+                    </div>
+                    <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                        <button id="btnAiSim" class="flex-1 py-2 px-4 bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2" disabled>
+                            <span>🤖 AI 分析实验结果</span>
+                        </button>
+                    </div>
+                    <div id="aiSimResult" class="hidden mt-3 p-4 ai-response-box rounded-lg text-sm text-slate-700 markdown-content"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Full Characterization -->
+        <section id="analysis">
+            <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-900">材料表征分析</h2>
+                    <p class="mt-2 text-slate-600 max-w-2xl">
+                        通过 Raman、PL 和 AFM 等手段全方位确认样品质量。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="border-b border-slate-200 mb-8">
+                <nav class="-mb-px flex space-x-2" aria-label="Tabs">
+                    <button onclick="switchTab('raman')" id="tab-raman" class="nav-btn active flex-1 py-4 px-1 text-center font-medium text-sm">Raman 光谱</button>
+                    <button onclick="switchTab('pl')" id="tab-pl" class="nav-btn flex-1 py-4 px-1 text-center font-medium text-sm">PL 光致发光</button>
+                    <button onclick="switchTab('afm')" id="tab-afm" class="nav-btn flex-1 py-4 px-1 text-center font-medium text-sm">AFM 形貌</button>
+                </nav>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Text Description Column -->
+                <div class="lg:col-span-1 space-y-6 flex flex-col">
+                    <div class="flex-grow">
+                        <!-- Raman Desc -->
+                        <div id="desc-raman" class="tab-desc block">
+                            <h3 class="text-xl font-bold text-slate-800 mb-3">Raman 振动模式</h3>
+                            <ul class="space-y-3 text-sm text-slate-700 mb-6">
+                                <li class="flex items-start gap-2"><span class="bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded text-xs mt-0.5">E¹₂g</span><span>面内振动 (~384 cm⁻¹)。随层数增加红移。</span></li>
+                                <li class="flex items-start gap-2"><span class="bg-teal-100 text-teal-700 font-bold px-2 py-0.5 rounded text-xs mt-0.5">A₁g</span><span>面外振动 (~403 cm⁻¹)。随层数增加蓝移。</span></li>
+                            </ul>
+                            <div class="p-3 bg-slate-50 rounded border border-slate-200"><div class="text-xs font-bold text-slate-500 uppercase mb-1">判据</div><div class="text-sm font-semibold text-slate-800">单层 Δk ≈ 18-20 cm⁻¹</div></div>
+                        </div>
+
+                        <!-- PL Desc -->
+                        <div id="desc-pl" class="tab-desc hidden">
+                            <h3 class="text-xl font-bold text-slate-800 mb-3">光致发光 (PL)</h3>
+                            <p class="text-slate-600 mb-4 text-sm leading-relaxed">
+                                MoS₂ 从块体到单层会发生<strong>间接带隙向直接带隙的转变</strong>。单层 PL 强度极高。
+                            </p>
+                            <ul class="space-y-3 text-sm text-slate-700">
+                                <li class="flex items-start gap-2"><span class="text-rose-500 font-bold">•</span><span><strong>A Exciton:</strong> ~670 nm (1.85 eV)。</span></li>
+                                <li class="flex items-start gap-2"><span class="text-amber-500 font-bold">•</span><span><strong>B Exciton:</strong> ~627 nm (1.98 eV)。</span></li>
+                            </ul>
+                        </div>
+
+                        <!-- AFM Desc -->
+                        <div id="desc-afm" class="tab-desc hidden">
+                            <h3 class="text-xl font-bold text-slate-800 mb-3">AFM 高度与形貌</h3>
+                            <p class="text-slate-600 mb-4 text-sm leading-relaxed">
+                                原子力显微镜 (AFM) 能够精确测量样品的厚度台阶。
+                            </p>
+                            <div class="p-4 bg-slate-50 rounded border border-slate-200 mb-4">
+                                <span class="block text-sm font-semibold text-slate-800">单层理论厚度:</span>
+                                <span class="text-2xl font-mono text-teal-600">~0.65 nm</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Layer Controls -->
+                    <div class="space-y-3 pt-4 border-t border-slate-100">
+                        <label class="text-xs font-bold text-slate-400 uppercase">数据对比 (点击切换)</label>
+                        <div class="flex gap-2">
+                            <button onclick="updateChartData('1L')" class="flex-1 py-2 bg-white border border-slate-300 hover:border-teal-500 hover:text-teal-600 rounded text-sm font-medium transition shadow-sm">单层 (1L)</button>
+                            <button onclick="updateChartData('2L')" class="flex-1 py-2 bg-white border border-slate-300 hover:border-indigo-500 hover:text-indigo-600 rounded text-sm font-medium transition shadow-sm">双层 (2L)</button>
+                            <button onclick="updateChartData('Bulk')" class="flex-1 py-2 bg-white border border-slate-300 hover:border-slate-500 hover:text-slate-600 rounded text-sm font-medium transition shadow-sm">块体 (Bulk)</button>
+                        </div>
+                    </div>
+
+                    <!-- AI Spectrum Button -->
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <button id="btnAiSpectrum" class="w-full py-2 bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2">
+                            <span>✨ AI 解读当前数据</span>
+                        </button>
+                        <div id="aiSpectrumResult" class="hidden mt-3 p-3 ai-response-box rounded-lg text-sm text-slate-700 markdown-content"></div>
+                    </div>
+                </div>
+
+                <!-- Visualization Column -->
+                <div class="lg:col-span-2 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <div id="charChartContainer" class="chart-container">
+                        <canvas id="charChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-8 mt-12 text-center text-xs">
+        <p>Powered by Gemini 2.5 Flash | CVD Research Simulation Platform</p>
+    </footer>
+
+    <script>
+        // --- CONFIG ---
+        const apiKey = ""; // 请在此处填入您的 API Key
+        const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
+
+        // --- STATE ---
+        const state = {
+            currentTab: 'raman',
+            layerData: '1L',
+            sim: { temp: 650, pressure: 500, flow: 50, ratio: 10, time: 15, result: null }
+        };
+
+        // --- DATA ---
+        const ramanData = {
+            '1L': { label: 'Monolayer (1L)', color: '#0d9488', peaks: [{x: 384, y: 85}, {x: 403, y: 100}] },
+            '2L': { label: 'Bilayer (2L)', color: '#4f46e5', peaks: [{x: 383, y: 70}, {x: 405, y: 90}] },
+            'Bulk': { label: 'Bulk MoS₂', color: '#475569', peaks: [{x: 382, y: 50}, {x: 408, y: 110}] }
+        };
+        const plData = {
+            '1L': { label: 'Monolayer PL', color: '#f43f5e', peaks: [{x: 620, y: 20}, {x: 670, y: 100}] }, 
+            '2L': { label: 'Bilayer PL', color: '#fbbf24', peaks: [{x: 620, y: 10}, {x: 670, y: 30}] },   
+            'Bulk': { label: 'Bulk PL', color: '#94a3b8', peaks: [{x: 670, y: 5}] }                       
+        };
+
+        // --- UTILS ---
+        function scrollToSection(id) {
+            const el = document.getElementById(id);
+            if(el) el.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function generateCurve(peaks, xStart, xEnd, width=5) {
+            const data = [];
+            for (let x = xStart; x <= xEnd; x += 1) {
+                let y = 0;
+                peaks.forEach(p => {
+                    y += p.y * Math.exp(-Math.pow(x - p.x, 2) / (2 * Math.pow(width, 2)));
+                });
+                y += Math.random() * 2; 
+                data.push({x, y});
+            }
+            return data;
+        }
+
+        // --- AI CALL ---
+        async function callGemini(prompt, outputElementId) {
+            const outputEl = document.getElementById(outputElementId);
+            outputEl.classList.remove('hidden');
+            outputEl.innerHTML = '<span class="typing-indicator text-slate-500">AI 正在分析...</span>';
+            if (!apiKey) { outputEl.innerHTML = '<span class="text-red-500">Error: No API Key.</span>'; return; }
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await response.json();
+                outputEl.innerHTML = marked.parse(data.candidates[0].content.parts[0].text);
+            } catch (error) { console.error(error); outputEl.innerHTML = '<span class="text-red-500">Service Unavailable.</span>'; }
+        }
+
+        // --- CHART & TAB LOGIC ---
+        let charChart = null;
+
+        function initChart() {
+            if (typeof Chart === 'undefined') return;
+            const ctx = document.getElementById('charChart').getContext('2d');
+            charChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: [] },
+                options: { responsive: true, maintainAspectRatio: false, interaction: {intersect: false}, scales: {y: {display:false}} }
+            });
+            updateChartData('1L'); 
+        }
+
+        function switchTab(tab) {
+            state.currentTab = tab;
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active', 'bg-teal-50'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.querySelectorAll('.tab-desc').forEach(d => d.classList.add('hidden'));
+            document.getElementById(`desc-${tab}`).classList.remove('hidden');
+            document.getElementById('aiSpectrumResult').classList.add('hidden');
+            updateChartData(state.layerData);
+        }
+
+        function updateChartData(layer) {
+            state.layerData = layer;
+            if (!charChart) return;
+
+            let newData, label, color, xMin, xMax, xTitle;
+
+            if (state.currentTab === 'raman') {
+                const d = ramanData[layer];
+                newData = generateCurve(d.peaks, 350, 450);
+                label = d.label; color = d.color; xMin = 350; xMax = 450; xTitle = 'Raman Shift (cm⁻¹)';
+            } else if (state.currentTab === 'pl') {
+                const d = plData[layer];
+                newData = generateCurve(d.peaks, 550, 800, 10); 
+                label = d.label; color = d.color; xMin = 550; xMax = 800; xTitle = 'Wavelength (nm)';
+            } else {
+                xTitle = 'Distance (nm)'; xMin = 0; xMax = 20; color = '#0f766e'; label = 'AFM Height Profile';
+                const h = layer === '1L' ? 0.7 : (layer === '2L' ? 1.4 : 5.0);
+                newData = [];
+                for(let i=0; i<20; i++) newData.push({x: i, y: (i > 5 && i < 15) ? h + Math.random()*0.1 : Math.random()*0.1});
+            }
+
+            charChart.data.datasets = [{
+                label: label, data: newData, borderColor: color,
+                backgroundColor: color + '20', borderWidth: 2, fill: true, pointRadius: 0, tension: 0.4
+            }];
+            charChart.options.scales.x = { type: 'linear', min: xMin, max: xMax, title: {display:true, text: xTitle} };
+            charChart.update();
+        }
+
+        // --- SIMULATION LOGIC ---
+        function runSimulation() {
+            const T = parseInt(document.getElementById('tempSlider').value);
+            const P = parseInt(document.getElementById('pressureSlider').value);
+            const F = parseInt(document.getElementById('flowSlider').value);
+            const R = parseInt(document.getElementById('ratioSlider').value);
+            const Time = parseInt(document.getElementById('timeSlider').value);
+
+            state.sim = { temp: T, pressure: P, flow: F, ratio: R, time: Time };
+            let result = { growth: false, quality: 'Low', shape: 'triangle', size: 0, density: 0, coverage: 0, mode: '' };
+
+            let cond = "ok";
+            if(T<600) { result.mode="Too Cold"; cond="bad"; }
+            else if(F<20 || F>150) { result.mode="Flow Issue"; cond="poor"; }
+            else {
+                result.growth = true;
+                result.shape = R < 3 ? 'hexagon' : (R < 10 ? 'truncated' : 'triangle');
+                let baseSize = (T-600)*0.5 + 5;
+                result.size = baseSize * (Time/10);
+                let baseDensity = (P/100) + (R/5);
+                result.density = Math.min(baseDensity, 50);
+                let cov = (Math.pow(result.size,2)*result.density)/2000 * 100;
+                result.coverage = Math.min(cov, 100);
+                result.mode = result.coverage > 90 ? "Continuous Film" : "Island Growth";
+            }
+            
+            state.sim.result = result;
+            drawSimulation(result);
+            document.getElementById('btnAiSim').disabled = false;
+            document.getElementById('shapeDisplay').innerText = result.shape.toUpperCase();
+            document.getElementById('growthMode').innerText = result.mode;
+        }
+
+        function drawSimulation(res) {
+            const canvas = document.getElementById('simCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            if(!res.growth) {
+                ctx.fillStyle = '#cbd5e1'; 
+                for(let i=0; i<10; i++) ctx.fillRect(Math.random()*800, Math.random()*450, 2, 2);
+                return;
+            }
+            if(res.coverage > 95) { ctx.fillStyle = 'rgba(15, 118, 110, 0.2)'; ctx.fillRect(0,0,800,450); }
+            
+            const count = Math.min(res.density * 5, 200);
+            for(let i=0; i<count; i++) {
+                const x = Math.random()*800, y = Math.random()*450, s = res.size*(0.8+Math.random()*0.4);
+                let color = res.shape === 'hexagon' ? '#4f46e5' : (res.shape==='truncated' ? '#0891b2' : '#0f766e');
+                drawPoly(ctx, x, y, s, res.shape, color);
+            }
+        }
+
+        function drawPoly(ctx, x, y, s, shape, color) {
+            ctx.fillStyle = color; ctx.globalAlpha = 0.7; ctx.beginPath();
+            let sides = shape === 'triangle' ? 3 : 6;
+            for(let i=0; i<sides; i++) {
+                let a = (Math.PI*2/sides)*i - Math.PI/2;
+                let r = (shape === 'truncated' && i%2!==0) ? s*0.6 : s;
+                ctx.lineTo(x + r*Math.cos(a), y + r*Math.sin(a));
+            }
+            ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1.0;
+        }
+
+        // --- HANDLERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            runSimulation();
+            
+            ['temp','pressure','flow','ratio','time'].forEach(id => {
+                document.getElementById(id+'Slider').addEventListener('input', (e) => {
+                    document.getElementById(id+'Value').innerText = e.target.value + (id==='temp'?'°C':(id==='ratio'?'':(id==='time'?' min':(id==='flow'?' sccm':' Pa'))));
+                });
+            });
+            document.getElementById('runSimBtn').addEventListener('click', runSimulation);
+
+            document.getElementById('btnAiSim').addEventListener('click', () => {
+                callGemini(`分析 CVD 实验: T=${state.sim.temp}, P=${state.sim.pressure}, S:Mo=${state.sim.ratio}, Time=${state.sim.time}。结果: ${state.sim.result.mode}, Shape=${state.sim.result.shape}。请解释 S:Mo 比对形状的影响及时间对覆盖率的影响。`, 'aiSimResult');
+            });
+            document.getElementById('btnAiSpectrum').addEventListener('click', () => {
+                let prompt = "";
+                if(state.currentTab === 'raman') prompt = `解释 ${state.layerData} MoS2 的 Raman 特征 (E2g, A1g 峰间距)。`;
+                else if(state.currentTab === 'pl') prompt = `解释 ${state.layerData} MoS2 的 PL 光谱特征 (直接带隙 vs 间接带隙)。`;
+                else prompt = `解释 ${state.layerData} MoS2 的 AFM 高度表征数据。`;
+                callGemini(prompt, 'aiSpectrumResult');
+            });
+        });
+    </script>
+</body>
+</html>
