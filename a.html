@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVD低温低压生长二硫化钼 (MoS2) 研究交互平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Changed CDN to jsdelivr for better stability -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Add Markdown parsing library for AI responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Science Lab - Slate (Neutral Background), Teal (Primary Action), Indigo (Data), Rose (Alerts/Heat) -->
+    <!-- Application Structure Plan: 
+         1. Header: Title and Abstract.
+         2. Context Section: Why MoS2? Why Low T/P? (Cards).
+         3. Virtual CVD Reactor (Interactive Core): 
+            - Users adjust T, P, and Flow to "run" a growth cycle. 
+            - AI Integration: "Analyze Result" button sends params to Gemini for scientific explanation.
+         4. Characterization Analysis (Tabbed Interface):
+            - AI Integration: "Explain Spectrum" button asks Gemini to explain specific peak shifts.
+         5. Optimization Results: Charts showing the trade-off between Temperature and Grain Size/Quality.
+    -->
+    
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: #f8fafc; color: #334155; }
+        .card { background: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.3s ease; }
+        .card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .chart-container { position: relative; width: 100%; height: 350px; max-height: 400px; max-width: 100%; margin: 0 auto; }
+        .nav-btn.active { border-bottom: 2px solid #0f766e; color: #0f766e; font-weight: 600; }
+        .slider-thumb { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; background: #cbd5e1; border-radius: 5px; outline: none; }
+        .slider-thumb::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #0f766e; cursor: pointer; transition: background .15s ease-in-out; }
+        .slider-thumb::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #0f766e; cursor: pointer; transition: background .15s ease-in-out; }
+        
+        /* AI Feature Styling */
+        .ai-response-box { background: linear-gradient(to right, #f0f9ff, #e0f2fe); border-left: 4px solid #0ea5e9; }
+        .typing-indicator::after { content: '...'; animation: typing 1s infinite; }
+        @keyframes typing { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+        .markdown-content p { margin-bottom: 0.5em; }
+        .markdown-content strong { color: #0369a1; font-weight: 600; }
+        .chart-error { display: flex; align-items: center; justify-content: center; height: 100%; color: #ef4444; font-size: 0.875rem; background: #fef2f2; border: 1px dashed #ef4444; border-radius: 0.5rem; padding: 1rem; text-align: center; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-teal-600 rounded flex items-center justify-center text-white font-bold text-lg">Mo</div>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight">CVD Research: <span class="text-teal-600">Low-T & Low-P Growth of MoS₂</span></h1>
+            </div>
+            <nav class="hidden md:flex space-x-8">
+                <button onclick="scrollToSection('intro')" class="text-slate-500 hover:text-teal-600 transition">项目背景</button>
+                <button onclick="scrollToSection('simulator')" class="text-slate-500 hover:text-teal-600 transition">虚拟实验室</button>
+                <button onclick="scrollToSection('analysis')" class="text-slate-500 hover:text-teal-600 transition">表征分析</button>
+                <button onclick="scrollToSection('optimization')" class="text-slate-500 hover:text-teal-600 transition">参数优化</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-12">
+
+        <!-- SECTION 1: Introduction -->
+        <section id="intro" class="space-y-6">
+            <div class="max-w-3xl mx-auto text-center space-y-4">
+                <h2 class="text-3xl font-bold text-slate-900">二维半导体材料的低温生长挑战</h2>
+                <p class="text-lg text-slate-600 leading-relaxed">
+                    二硫化钼 (MoS₂) 是一种具有直接带隙的层状过渡金属硫族化合物 (TMDC)。虽然传统CVD生长通常需要高温 (750-900°C)，但为了兼容柔性基底和现有CMOS工艺，<strong>低温 (Low-T) 且低压 (Low-P)</strong> 的生长策略至关重要。本平台旨在展示通过调节前驱体供给和反应动力学来实现高质量低温生长的机制。
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                <!-- Info Card 1 -->
+                <div class="card p-6 border-l-4 border-teal-500">
+                    <div class="text-teal-600 mb-2 text-2xl">⚡</div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">电子特性</h3>
+                    <p class="text-slate-600 text-sm">单层MoS₂具有约1.8eV的直接带隙，展现出优异的开关比 (>10⁸) 和光电响应，是下一代纳米电子器件的核心材料。</p>
+                </div>
+                <!-- Info Card 2 -->
+                <div class="card p-6 border-l-4 border-indigo-500">
+                    <div class="text-indigo-600 mb-2 text-2xl">🌡️</div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">低温优势 (Low-T)</h3>
+                    <p class="text-slate-600 text-sm">降低生长温度 (<650°C) 可防止玻璃基底形变，并允许在柔性聚合物 (如聚酰亚胺) 上直接集成，降低能源成本。</p>
+                </div>
+                <!-- Info Card 3 -->
+                <div class="card p-6 border-l-4 border-rose-500">
+                    <div class="text-rose-600 mb-2 text-2xl">📉</div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">低压控制 (Low-P)</h3>
+                    <p class="text-slate-600 text-sm">低压环境 (10-1000 Pa) 增加了前驱体分子的平均自由程，改善了大面积均匀性，并有效抑制气相中的杂质反应。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Virtual CVD Simulator -->
+        <section id="simulator" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 md:p-8 bg-slate-50 border-b border-slate-200">
+                <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                    <span class="bg-slate-800 text-white text-xs px-2 py-1 rounded uppercase tracking-wider">Interactive</span>
+                    虚拟CVD反应室 (Process Simulator)
+                </h2>
+                <p class="text-slate-600 mt-2 max-w-4xl">
+                    在此模块中，您可以模拟调整管式炉的<strong>生长温度</strong>、<strong>反应压强</strong>以及<strong>载气流量</strong>。观察这些动力学参数如何协同影响 MoS₂ 的结晶质量。寻找最佳的“三元平衡窗口”。
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-0">
+                <!-- Controls Side -->
+                <div class="lg:col-span-4 p-6 md:p-8 border-b lg:border-b-0 lg:border-r border-slate-200 space-y-8">
+                    
+                    <!-- Temp Slider -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="font-semibold text-slate-700">生长温度 (Temperature)</label>
+                            <span id="tempValue" class="text-teal-600 font-mono font-bold">650°C</span>
+                        </div>
+                        <input type="range" id="tempSlider" min="500" max="900" step="10" value="650" class="slider-thumb w-full">
+                        <div class="flex justify-between text-xs text-slate-400 mt-1">
+                            <span>500°C</span>
+                            <span>900°C</span>
+                        </div>
+                    </div>
+
+                    <!-- Pressure Slider -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="font-semibold text-slate-700">反应压强 (Pressure)</label>
+                            <span id="pressureValue" class="text-teal-600 font-mono font-bold">500 Pa</span>
+                        </div>
+                        <input type="range" id="pressureSlider" min="10" max="10000" step="10" value="500" class="slider-thumb w-full">
+                        <div class="flex justify-between text-xs text-slate-400 mt-1">
+                            <span>10 Pa (LPCVD)</span>
+                            <span>10kPa (APCVD)</span>
+                        </div>
+                    </div>
+
+                    <!-- Flow Rate Slider (RESTORED) -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="font-semibold text-slate-700">载气流量 (Flow Rate)</label>
+                            <span id="flowValue" class="text-teal-600 font-mono font-bold">50 sccm</span>
+                        </div>
+                        <input type="range" id="flowSlider" min="5" max="200" step="5" value="50" class="slider-thumb w-full">
+                        <div class="flex justify-between text-xs text-slate-400 mt-1">
+                            <span>5 sccm (Low)</span>
+                            <span>200 sccm (High)</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">影响前驱体输运与驻留时间 (Ar/H₂)</p>
+                    </div>
+
+                    <button id="runSimBtn" class="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold shadow-md transition-colors flex items-center justify-center gap-2">
+                        <span>🚀 运行生长模拟</span>
+                    </button>
+                </div>
+
+                <!-- Visualization Side -->
+                <div class="lg:col-span-8 p-6 md:p-8 bg-white relative flex flex-col">
+                    <!-- Status Header -->
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">实验状态</span>
+                            <div id="simStatusTitle" class="text-xl font-bold text-slate-800">等待开始...</div>
+                        </div>
+                        <div class="bg-slate-100 px-4 py-2 rounded-lg">
+                            <span class="text-xs text-slate-500 block">预期生长模式</span>
+                            <span id="growthMode" class="font-semibold text-indigo-600">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Simulation Canvas Container -->
+                    <div class="relative w-full aspect-video bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex items-center justify-center">
+                        <canvas id="simCanvas" width="600" height="340" class="w-full h-full object-contain"></canvas>
+                        
+                        <!-- Overlay Labels -->
+                        <div class="absolute top-4 left-4 text-xs text-slate-400 font-mono">
+                            Substrate: SiO₂/Si<br>
+                            Precursor: MoO₃ + S
+                        </div>
+                    </div>
+
+                    <!-- Analysis Output Text -->
+                    <div id="simAnalysis" class="mt-6 text-sm text-slate-600 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        请调节左侧参数并点击“运行”以查看实验结果预测。
+                    </div>
+
+                    <!-- AI Analysis Button & Area -->
+                    <div class="mt-4 border-t border-slate-100 pt-4">
+                        <button id="btnAiSim" class="flex items-center gap-2 text-sm font-bold text-sky-600 hover:text-sky-700 transition" disabled>
+                            <span>✨ 询问 AI 专家：深入分析当前生长结果</span>
+                        </button>
+                        <div id="aiSimResult" class="hidden mt-3 p-4 ai-response-box rounded-lg text-sm text-slate-700 markdown-content"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Characterization Analysis -->
+        <section id="analysis">
+            <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-900">材料表征分析</h2>
+                    <p class="mt-2 text-slate-600 max-w-2xl">
+                        生长完成后，我们需要通过光谱学手段确认样品的质量、层数和光学性质。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="border-b border-slate-200 mb-8">
+                <nav class="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
+                    <button onclick="switchTab('raman')" id="tab-raman" class="nav-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Raman 光谱分析</button>
+                    <button onclick="switchTab('pl')" id="tab-pl" class="nav-btn border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">PL 光致发光</button>
+                    <button onclick="switchTab('afm')" id="tab-afm" class="nav-btn border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">晶体形貌 (OM/AFM)</button>
+                </nav>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Text Description Column -->
+                <div class="lg:col-span-1 space-y-6 flex flex-col">
+                    <div class="flex-grow">
+                        <div id="desc-raman" class="tab-desc block">
+                            <h3 class="text-xl font-bold text-slate-800 mb-3">Raman 振动模式</h3>
+                            <p class="text-slate-600 mb-4 text-sm leading-relaxed">
+                                Raman光谱是判断 MoS₂ 层数的“金标准”。主要关注两个特征峰：
+                            </p>
+                            <ul class="space-y-3 text-sm text-slate-700 mb-6">
+                                <li class="flex items-start gap-2">
+                                    <span class="bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded text-xs mt-0.5">E¹₂g</span>
+                                    <span>面内振动模 (~384 cm⁻¹)。随着层数增加向红移。</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="bg-teal-100 text-teal-700 font-bold px-2 py-0.5 rounded text-xs mt-0.5">A₁g</span>
+                                    <span>面外振动模 (~403 cm⁻¹)。随着层数增加向蓝移。</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div id="desc-pl" class="tab-desc hidden">
+                            <h3 class="text-xl font-bold text-slate-800 mb-3">光致发光 (PL)</h3>
+                            <p class="text-slate-600 mb-4 text-sm leading-relaxed">
+                                MoS₂ 从块体到单层会发生<strong>间接带隙向直接带隙的转变</strong>。
+                            </p>
+                            <ul class="space-y-3 text-sm text-slate-700">
+                                <li class="flex items-start gap-2">
+                                    <span class="text-rose-500 font-bold">•</span>
+                                    <span><strong>A Exciton:</strong> ~670 nm (1.85 eV)。</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div id="desc-afm" class="tab-desc hidden">
+                            <h3 class="text-xl font-bold text-slate-800 mb-3">形貌与厚度</h3>
+                            <p class="text-slate-600 mb-4 text-sm leading-relaxed">
+                                通过原子力显微镜 (AFM) 观察晶体高度。
+                            </p>
+                            <p class="text-sm text-slate-600">
+                                <strong>单层厚度:</strong> ~0.7 nm
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Controls -->
+                    <div class="space-y-3 pt-4 border-t border-slate-100">
+                        <label class="text-xs font-bold text-slate-400 uppercase">数据层数对比</label>
+                        <div class="flex gap-2">
+                            <button onclick="updateChartData('1L')" class="flex-1 py-2 bg-white border border-slate-300 hover:border-teal-500 hover:text-teal-600 rounded text-sm font-medium transition shadow-sm">单层 (1L)</button>
+                            <button onclick="updateChartData('2L')" class="flex-1 py-2 bg-white border border-slate-300 hover:border-indigo-500 hover:text-indigo-600 rounded text-sm font-medium transition shadow-sm">双层 (2L)</button>
+                            <button onclick="updateChartData('Bulk')" class="flex-1 py-2 bg-white border border-slate-300 hover:border-slate-500 hover:text-slate-600 rounded text-sm font-medium transition shadow-sm">块体 (Bulk)</button>
+                        </div>
+                    </div>
+
+                    <!-- AI Spectrum Explanation Button -->
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <button id="btnAiSpectrum" class="w-full py-2 bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2">
+                            <span>✨ AI 解读：解释当前光谱差异</span>
+                        </button>
+                        <div id="aiSpectrumResult" class="hidden mt-3 p-3 ai-response-box rounded-lg text-sm text-slate-700 markdown-content"></div>
+                    </div>
+                </div>
+
+                <!-- Visualization Column -->
+                <div class="lg:col-span-2 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <div id="mainChartContainer" class="chart-container">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Optimization Data -->
+        <section id="optimization" class="bg-slate-50 rounded-2xl p-8 border border-slate-200">
+             <div class="mb-6">
+                <h2 class="text-3xl font-bold text-slate-900">参数优化趋势</h2>
+                <p class="mt-2 text-slate-600">
+                    低温生长的核心难点在于克服成核势垒与扩散动力学的平衡。以下数据展示了温度和压强对晶粒尺寸及覆盖率的统计影响。
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Chart 1: Grain Size vs Temp -->
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">晶粒尺寸 vs. 生长温度</h3>
+                    <div id="tempChartContainer" class="chart-container h-64">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-4 text-center">
+                        随着温度降低，前驱体表面迁移率下降，导致晶粒尺寸减小。
+                    </p>
+                </div>
+
+                <!-- Chart 2: Pressure Effect -->
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">覆盖率 vs. 反应压强</h3>
+                    <div id="pressureChartContainer" class="chart-container h-64">
+                        <canvas id="pressureChart"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-4 text-center">
+                        低压 (Low-P) 有助于控制成核密度，利于横向外延生长。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-12 mt-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 text-center space-y-4">
+            <h2 class="text-white text-lg font-semibold">CVD MoS₂ Research Interactive</h2>
+            <p class="text-sm max-w-2xl mx-auto">
+                本交互页面基于二硫化钼 CVD 生长的通用物理模型构建，并集成了 <strong>Google Gemini AI</strong> 提供实时科学解释。
+            </p>
+            <div class="pt-4 text-xs text-slate-600">
+                Generated for Research Exploration | Powered by Gemini 2.5 Flash
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // --- 0. GEMINI API CONFIGURATION ---
+        const apiKey = ""; // System will provide the key
+        const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
+
+        async function callGemini(prompt, outputElementId) {
+            const outputEl = document.getElementById(outputElementId);
+            outputEl.classList.remove('hidden');
+            outputEl.innerHTML = '<span class="typing-indicator text-slate-500">AI 正在思考 (AI is thinking)</span>';
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                if (!response.ok) throw new Error('API Request Failed');
+
+                const data = await response.json();
+                const text = data.candidates[0].content.parts[0].text;
+                
+                // Use marked.js to parse markdown if available, else plain text
+                outputEl.innerHTML = typeof marked !== 'undefined' ? marked.parse(text) : text;
+            } catch (error) {
+                console.error(error);
+                outputEl.innerHTML = '<span class="text-red-500">AI 服务暂时不可用，请稍后再试。 (Service Unavailable)</span>';
+            }
+        }
+
+        // --- 1. STATE MANAGEMENT ---
+        const state = {
+            currentTab: 'raman',
+            layerData: '1L', // 1L, 2L, Bulk
+            sim: {
+                temp: 650,
+                pressure: 500,
+                flow: 50, // Added Flow Rate
+                result: null 
+            }
+        };
+
+        // --- 2. CHART INITIALIZATION (Chart.js) ---
+        let mainChartInstance = null;
+        let tempChartInstance = null;
+        let pressureChartInstance = null;
+
+        // Data for Raman
+        const ramanData = {
+            '1L': {
+                label: 'Monolayer (1L)',
+                color: '#0d9488', // teal-600
+                peaks: [
+                    {x: 360, y: 5}, {x: 384, y: 85}, {x: 403, y: 100}, {x: 430, y: 5} // E2g ~384, A1g ~403, Diff ~19
+                ]
+            },
+            '2L': {
+                label: 'Bilayer (2L)',
+                color: '#4f46e5', // indigo-600
+                peaks: [
+                    {x: 360, y: 5}, {x: 383, y: 70}, {x: 405, y: 90}, {x: 430, y: 5} // E2g ~383, A1g ~405, Diff ~22
+                ]
+            },
+            'Bulk': {
+                label: 'Bulk MoS₂',
+                color: '#475569', // slate-600
+                peaks: [
+                    {x: 360, y: 5}, {x: 382, y: 50}, {x: 408, y: 110}, {x: 430, y: 5} // E2g ~382, A1g ~408, Diff ~26
+                ]
+            }
+        };
+
+        // Data for PL
+        const plData = {
+            '1L': {
+                label: 'Monolayer PL',
+                color: '#f43f5e', // rose-500
+                peaks: [{x: 600, y: 10}, {x: 620, y: 30}, {x: 670, y: 100}, {x: 750, y: 5}] // Strong A exciton
+            },
+            '2L': {
+                label: 'Bilayer PL',
+                color: '#fbbf24', // amber-400
+                peaks: [{x: 600, y: 5}, {x: 620, y: 10}, {x: 670, y: 25}, {x: 750, y: 2}] // Weaker
+            },
+            'Bulk': {
+                label: 'Bulk PL',
+                color: '#94a3b8',
+                peaks: [{x: 600, y: 1}, {x: 670, y: 2}, {x: 750, y: 1}] // Negligible
+            }
+        };
+
+        // Helper to generate smooth Gaussian curves from peak data
+        function generateCurve(peaks, xStart, xEnd, step = 1) {
+            const data = [];
+            for (let x = xStart; x <= xEnd; x += step) {
+                let y = 0;
+                // Add simple Gaussian contributions
+                peaks.forEach(p => {
+                    // Simulating Full Width Half Max logic simply
+                    const width = 5; 
+                    y += p.y * Math.exp(-Math.pow(x - p.x, 2) / (2 * Math.pow(width, 2)));
+                });
+                // Add noise baseline
+                y += Math.random() * 2;
+                data.push({x, y});
+            }
+            return data;
+        }
+
+        // Helper to check Chart.js
+        function checkChartLib(containerId) {
+            if (typeof Chart === 'undefined') {
+                const el = document.getElementById(containerId);
+                if (el) el.innerHTML = '<div class="chart-error">Chart.js Library failed to load.<br>Please check your connection.</div>';
+                return false;
+            }
+            return true;
+        }
+
+        function initMainChart() {
+            if (!checkChartLib('mainChartContainer')) return;
+
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const initialData = generateCurve(ramanData['1L'].peaks, 350, 450);
+            
+            mainChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Raman Intensity (a.u.)',
+                        data: initialData,
+                        borderColor: '#0d9488',
+                        backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        pointRadius: 0,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        title: { display: true, text: 'Raman Spectrum (Shift vs Layer Count)' },
+                        tooltip: { enabled: true }
+                    },
+                    scales: {
+                        x: { 
+                            type: 'linear', 
+                            title: { display: true, text: 'Raman Shift (cm⁻¹)' },
+                            min: 350, max: 450 
+                        },
+                        y: { display: false }
+                    }
+                }
+            });
+        }
+
+        function initOptCharts() {
+            if (!checkChartLib('tempChartContainer') || !checkChartLib('pressureChartContainer')) return;
+
+            // Temp Chart
+            const ctxTemp = document.getElementById('tempChart').getContext('2d');
+            // Mock data representing Grain Size (um) vs Temp
+            const tempData = [
+                {x: 550, y: 2}, {x: 600, y: 5}, {x: 650, y: 12}, 
+                {x: 700, y: 25}, {x: 750, y: 45}, {x: 800, y: 80}, {x: 850, y: 120}
+            ];
+            
+            tempChartInstance = new Chart(ctxTemp, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Grain Size (μm)',
+                        data: tempData,
+                        backgroundColor: '#0f766e',
+                        showLine: true,
+                        borderColor: '#99f6e4',
+                        borderDash: [5, 5]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { title: {display: true, text: 'Growth Kinetic Trend'} },
+                    scales: {
+                        x: { title: {display: true, text: 'Temperature (°C)'} },
+                        y: { title: {display: true, text: 'Avg. Grain Size (μm)'} }
+                    }
+                }
+            });
+
+            // Pressure Chart
+            const ctxPres = document.getElementById('pressureChart').getContext('2d');
+            // Mock data: Pressure vs Coverage %
+            const presData = [
+                {x: 10, y: 10}, {x: 50, y: 30}, {x: 100, y: 60}, 
+                {x: 500, y: 85}, {x: 1000, y: 95}, {x: 5000, y: 98} // APCVD high coverage but multilayer risk
+            ];
+            
+            pressureChartInstance = new Chart(ctxPres, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Film Coverage (%)',
+                        data: presData,
+                        borderColor: '#e11d48',
+                        backgroundColor: 'rgba(225, 29, 72, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'logarithmic', title: {display: true, text: 'Pressure (Pa)'}, min: 10, max: 10000 },
+                        y: { title: {display: true, text: 'Substrate Coverage (%)'}, max: 100 }
+                    }
+                }
+            });
+        }
+
+        // --- 3. UI INTERACTION LOGIC ---
+
+        function switchTab(tabName) {
+            state.currentTab = tabName;
+            
+            // Update buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active', 'border-b-2', 'border-0f766e', 'text-0f766e', 'font-600'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if(!btn.id.includes(tabName)) btn.classList.add('border-transparent', 'text-slate-500');
+            });
+            const activeBtn = document.getElementById(`tab-${tabName}`);
+            activeBtn.classList.add('active');
+            activeBtn.classList.remove('border-transparent', 'text-slate-500');
+
+            // Update Descriptions
+            document.querySelectorAll('.tab-desc').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`desc-${tabName}`).classList.remove('hidden');
+
+            // Reset Chart to 1L of new type
+            updateChartData('1L');
+            
+            // Hide previous AI results
+            document.getElementById('aiSpectrumResult').classList.add('hidden');
+        }
+
+        function updateChartData(layerType) {
+            state.layerData = layerType;
+            let newData, newLabel, newColor, xMin, xMax, xTitle;
+
+            if (state.currentTab === 'raman') {
+                const source = ramanData[layerType];
+                newData = generateCurve(source.peaks, 350, 450);
+                newLabel = `${source.label} Raman Intensity`;
+                newColor = source.color;
+                xMin = 350; xMax = 450;
+                xTitle = 'Raman Shift (cm⁻¹)';
+            } else if (state.currentTab === 'pl') {
+                const source = plData[layerType];
+                newData = generateCurve(source.peaks, 550, 800, 2);
+                newLabel = `${source.label} Intensity`;
+                newColor = source.color;
+                xMin = 550; xMax = 800;
+                xTitle = 'Wavelength (nm)';
+            } else {
+                // For AFM tab, we might just show a static placeholder or re-use chart for height profile
+                // Simulating a Step Profile for AFM
+                xTitle = 'Distance (nm)';
+                xMin = 0; xMax = 20;
+                newColor = '#0f766e';
+                newLabel = 'AFM Height Profile';
+                const height = layerType === '1L' ? 0.7 : (layerType === '2L' ? 1.4 : 5.0);
+                newData = [];
+                for(let i=0; i<20; i++) {
+                    newData.push({x: i, y: (i > 5 && i < 15) ? height + (Math.random()*0.05) : 0 + (Math.random()*0.05)});
+                }
+            }
+
+            if (mainChartInstance) {
+                mainChartInstance.data.datasets[0].data = newData;
+                mainChartInstance.data.datasets[0].label = newLabel;
+                mainChartInstance.data.datasets[0].borderColor = newColor;
+                mainChartInstance.data.datasets[0].backgroundColor = newColor + '20'; // add transparency
+                mainChartInstance.options.scales.x.min = xMin;
+                mainChartInstance.options.scales.x.max = xMax;
+                mainChartInstance.options.scales.x.title.text = xTitle;
+                mainChartInstance.update();
+            }
+        }
+
+        // --- 4. CVD SIMULATOR LOGIC ---
+
+        function drawCrystal(ctx, x, y, size, shape, color, opacity) {
+            ctx.beginPath();
+            ctx.fillStyle = color;
+            ctx.globalAlpha = opacity;
+            
+            if (shape === 'triangle') {
+                // Draw equilateral triangle
+                ctx.moveTo(x, y - size);
+                ctx.lineTo(x + size * 0.866, y + size * 0.5);
+                ctx.lineTo(x - size * 0.866, y + size * 0.5);
+            } else if (shape === 'hexagon') {
+                 // Draw hexagon
+                 for (let i = 0; i < 6; i++) {
+                    const angle = 2 * Math.PI / 6 * i;
+                    const hx = x + size * Math.cos(angle);
+                    const hy = y + size * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(hx, hy);
+                    else ctx.lineTo(hx, hy);
+                 }
+            } else if (shape === 'fractal') {
+                // Rough star/fractal shape for unstable growth
+                for (let i = 0; i < 12; i++) {
+                    const angle = 2 * Math.PI / 12 * i;
+                    const r = i % 2 === 0 ? size : size * 0.4;
+                    const fx = x + r * Math.cos(angle);
+                    const fy = y + r * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(fx, fy);
+                    else ctx.lineTo(fx, fy);
+                }
+            }
+            
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+        }
+
+        function runSimulation() {
+            const T = parseInt(document.getElementById('tempSlider').value);
+            const P = parseInt(document.getElementById('pressureSlider').value);
+            const F = parseInt(document.getElementById('flowSlider').value); // Get Flow Rate
+            
+            state.sim.temp = T;
+            state.sim.pressure = P;
+            state.sim.flow = F;
+
+            const canvas = document.getElementById('simCanvas');
+            const ctx = canvas.getContext('2d');
+            const statusTitle = document.getElementById('simStatusTitle');
+            const statusAnalysis = document.getElementById('simAnalysis');
+            const modeEl = document.getElementById('growthMode');
+            const aiBtn = document.getElementById('btnAiSim');
+
+            // Clear Canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Simulation Logic Model
+            let result = {
+                growth: false,
+                quality: 'Low',
+                shape: 'triangle',
+                size: 10,
+                density: 5,
+                message: '',
+                mode: ''
+            };
+
+            // 1. Flow Rate Logic Check (Transport)
+            let flowStatus = "optimal";
+            if (F < 20) flowStatus = "low";
+            else if (F > 150) flowStatus = "high";
+
+            // 2. Temperature Logic
+            if (T < 600) {
+                // Too cold
+                result.message = "温度过低 (Too Low): 反应动力学不足。MoO₃ 前驱体无法有效升华或分解，基底表面几乎没有成核。";
+                result.growth = false;
+                result.mode = "No Growth / Kinetic Limited";
+                result.density = 2;
+                result.size = 2; // tiny dots
+                statusTitle.className = "text-xl font-bold text-slate-400";
+            } else if (T >= 600 && T <= 750) {
+                // Ideal Temp Window
+                if (P < 500) {
+                    // Ideal Pressure
+                    if (flowStatus === "low") {
+                        // Temp OK, P OK, but Flow too low
+                        result.message = "载气流量不足 (Flow Low): 虽然温度和压强适宜，但前驱体输运受限，导致成核密度极低且分布不均。";
+                        result.growth = true;
+                        result.quality = 'Low';
+                        result.shape = 'triangle';
+                        result.size = 15;
+                        result.density = 5; // Very sparse
+                        result.mode = "Mass Transport Limited (Flow)";
+                        statusTitle.className = "text-xl font-bold text-amber-500";
+                    } else if (flowStatus === "high") {
+                        // Temp OK, P OK, but Flow too high
+                        result.message = "载气流量过高 (Flow High): 气体流速过快，前驱体驻留时间太短，无法有效吸附成核。";
+                        result.growth = true;
+                        result.quality = 'Medium';
+                        result.shape = 'triangle'; // Still triangular but small
+                        result.size = 10; // Small due to short time
+                        result.density = 8;
+                        result.mode = "Residence Time Limited";
+                        statusTitle.className = "text-xl font-bold text-amber-500";
+                    } else {
+                        // All Good
+                        result.message = "低温低压且流量适中: 理想的生长窗口。输运速率与表面反应速率达到平衡，形成清晰的三角形单晶域。";
+                        result.growth = true;
+                        result.quality = 'High';
+                        result.shape = 'triangle';
+                        result.size = (T - 600) * 0.4 + 25; // Size grows with T
+                        result.density = 20; // Good density
+                        result.mode = "Surface Reaction Limited (Optimal)";
+                        statusTitle.className = "text-xl font-bold text-teal-600";
+                    }
+                } else {
+                    // Pressure too high
+                    result.message = "低温高压 (Low T/High P): 压强过高抑制了扩散。容易形成致密的小晶粒或非晶膜。";
+                    result.growth = true;
+                    result.quality = 'Medium';
+                    result.shape = 'fractal';
+                    result.size = 15;
+                    result.density = 40; // dense
+                    result.mode = "Diffusion Limited";
+                    statusTitle.className = "text-xl font-bold text-amber-500";
+                }
+            } else {
+                // High Temp (> 750)
+                result.message = "高温生长 (High T): 传统的CVD生长模式。晶体尺寸大，倾向于六边形生长。";
+                result.growth = true;
+                result.quality = 'High';
+                result.shape = 'hexagon';
+                result.size = 60;
+                result.density = 8;
+                result.mode = "Thermodynamically Favored";
+                statusTitle.className = "text-xl font-bold text-rose-500";
+            }
+
+            state.sim.result = result;
+            
+            // Enable AI Button
+            aiBtn.disabled = false;
+            // Hide previous AI result if params changed significantly
+            document.getElementById('aiSimResult').classList.add('hidden');
+
+            // Draw Results
+            statusTitle.innerText = result.growth ? "生长模拟完成" : "生长失败";
+            statusAnalysis.innerText = result.message;
+            modeEl.innerText = result.mode;
+
+            // Random Seed drawing
+            const seeds = result.density;
+            for(let i=0; i<seeds; i++) {
+                // Simple pseudo-random positions
+                const rx = Math.random() * canvas.width;
+                const ry = Math.random() * canvas.height;
+                const rSize = result.size * (0.8 + Math.random() * 0.4); // variation
+                
+                let color = '#0f766e'; // teal
+                if (result.shape === 'fractal') color = '#d97706'; // amber
+                if (!result.growth) color = '#94a3b8'; // gray dots
+
+                drawCrystal(ctx, rx, ry, rSize, result.shape, color, 0.7);
+            }
+            
+            // Draw scale bar
+            ctx.fillStyle = 'black';
+            ctx.fillRect(canvas.width - 70, canvas.height - 20, 50, 2);
+            ctx.font = '10px sans-serif';
+            ctx.fillText('10 μm', canvas.width - 60, canvas.height - 25);
+        }
+
+        // --- 5. AI INTERACTION HANDLERS ---
+
+        function handleAiSimAnalysis() {
+            const { temp, pressure, flow, result } = state.sim;
+            const prompt = `
+                Role: You are a senior materials scientist specializing in 2D Materials (TMDs) and CVD growth physics.
+                Context: A user is running a Virtual CVD simulation for MoS2.
+                Parameters: 
+                - Growth Temperature = ${temp}°C
+                - Pressure = ${pressure} Pa
+                - Carrier Gas Flow Rate = ${flow} sccm
+                
+                Simulation Outcome: 
+                - Growth Mode: "${result.mode}"
+                - Quality: "${result.quality}"
+                - Shape: "${result.shape}"
+                
+                Task: Provide a concise, scientific analysis (in Chinese) of this result.
+                Focus heavily on explaining the **Effect of Carrier Gas Flow Rate** (${flow} sccm) on the mass transport and residence time of precursors, in combination with T and P.
+                Explain why this flow rate helps or hinders growth at this specific temperature/pressure.
+                Keep the tone educational. Limit to 150 words.
+            `;
+            callGemini(prompt, 'aiSimResult');
+        }
+
+        function handleAiSpectrumAnalysis() {
+            const { currentTab, layerData } = state;
+            let prompt = "";
+            
+            if (currentTab === 'raman') {
+                prompt = `
+                    Role: Expert Spectroscopist.
+                    Task: Explain (in Chinese) the Raman spectrum features of **${layerData} MoS2**.
+                    Specifically, explain why the distance between E2g and A1g peaks changes as layer count changes (Force constants, interlayer coupling).
+                    Keep it simple for a physics student. Limit to 100 words.
+                `;
+            } else if (currentTab === 'pl') {
+                prompt = `
+                    Role: Expert Optoelectronics Researcher.
+                    Task: Explain (in Chinese) the Photoluminescence (PL) behavior of **${layerData} MoS2**.
+                    Focus on the bandgap transition (Direct vs Indirect) and how quantum confinement affects the PL intensity.
+                    Keep it simple. Limit to 100 words.
+                `;
+            } else {
+                prompt = `Explain AFM height profiles for ${layerData} MoS2 in Chinese.`;
+            }
+
+            callGemini(prompt, 'aiSpectrumResult');
+        }
+
+
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- 6. INITIALIZATION & EVENTS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initMainChart();
+            initOptCharts();
+            runSimulation(); // Run once with default
+
+            // Event Listeners for Sliders
+            const tSlider = document.getElementById('tempSlider');
+            const pSlider = document.getElementById('pressureSlider');
+            const fSlider = document.getElementById('flowSlider');
+            
+            tSlider.addEventListener('input', (e) => {
+                document.getElementById('tempValue').innerText = e.target.value + "°C";
+            });
+            pSlider.addEventListener('input', (e) => {
+                document.getElementById('pressureValue').innerText = e.target.value + " Pa";
+            });
+            fSlider.addEventListener('input', (e) => {
+                document.getElementById('flowValue').innerText = e.target.value + " sccm";
+            });
+
+            document.getElementById('runSimBtn').addEventListener('click', runSimulation);
+
+            // AI Buttons
+            document.getElementById('btnAiSim').addEventListener('click', handleAiSimAnalysis);
+            document.getElementById('btnAiSpectrum').addEventListener('click', handleAiSpectrumAnalysis);
+        });
+
+    </script>
+</body>
+</html>
